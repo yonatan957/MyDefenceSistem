@@ -1,0 +1,51 @@
+﻿@model IEnumerable<MyDefenceSistem.Models.Threat>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-action="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Origin)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Weapon)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.MissleQuantity)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.Origin.Name)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Weapon.Type)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.MissleQuantity)
+            </td>
+            <td>
+                <a asp-action="Delete" asp-route-id="@item.ThreatId">Delete</a>
+            </td>
+             <td>
+                    <form asp-action="Launch" method="post">
+                        <input type="hidden" name="id" value="@item.ThreatId" />
+                        <button type="submit" class="btn btn-danger">שגר</button>
+                    </form>
+                </td>
+        </tr>
+}
+    </tbody>
+</table>

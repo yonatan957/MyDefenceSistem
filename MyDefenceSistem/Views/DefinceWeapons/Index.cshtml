@@ -1,0 +1,38 @@
+﻿@model IEnumerable<MyDefenceSistem.Models.DefinceWeapon>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>מערכות הגנה</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Name)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.quantity)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Name)
+                </td>
+                <td>
+                    <form asp-action="UpdateQuantity" method="post">
+                        <input type="hidden" name="Id" value="@item.Id" />
+                        <input type="number" name="Quantity" value="@item.quantity" class="form-control" />
+                        <button type="submit" class="btn btn-primary">עדכן כמות</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

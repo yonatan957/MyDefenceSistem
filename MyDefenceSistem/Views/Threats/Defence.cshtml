@@ -1,0 +1,116 @@
+﻿@{
+    ViewData["Title"] = "Defence";
+}
+
+<h2>חדר מצב</h2>
+
+<div id="tableContainer">
+    <h3>איומים פעילים</h3>
+    <table id="queue1Table" class="table">
+        <thead>
+            <tr>
+                <th>Threat ID</th>
+                <th>מקום שיגור</th>
+                <th>זמן שיגור</th>
+                <th>סוג נשק</th>
+                <th>כמות טילים</th>
+                <th>כמות טילים שיורטו</th>
+                <th>מצב האיום</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <h3>איומים שיורטו</h3>
+    <table id="queue2Table" class="table">
+        <thead>
+            <tr>
+                <th>Threat ID</th>
+                <th>מקום שיגור</th>
+                <th>זמן שיגור</th>
+                <th>סוג נשק</th>
+                <th>כמות טילים</th>
+                <th>כמות טילים שיורטו</th>
+                <th>מצב האיום</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <h3>איומים שפגעו</h3>
+    <table id="queue3Table" class="table">
+        <thead>
+            <tr>
+                <th>Threat ID</th>
+                <th>מקום שיגור</th>
+                <th>זמן שיגור</th>
+                <th>סוג נשק</th>
+                <th>כמות טילים</th>
+                <th>כמות טילים שיורטו</th>
+                <th>מצב האיום</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
+@section scripts {
+    <script src="~/lib/signalr/signalr.min.js"></script>
+    <script type="text/javascript">
+        const connection = new signalR.HubConnectionBuilder().withUrl("/threat_hub").build();
+
+        // קבלת הודעות מה-Hub
+        connection.on("BE_ReciveThreatsQueue", function (queue1) {
+            console.log(queue1);
+            populateTable(queue1, "#queue1Table");
+        });
+
+        connection.on("ReceiveQueue2", function (queue2) {
+            populateTable(queue2, "#queue2Table");
+        });
+
+        connection.on("ReceiveQueue3", function (queue3) {
+            populateTable(queue3, "#queue3Table");
+        });
+
+        // הוספת מאזין לאירוע עבור הודעות כלליות
+        connection.on("ReceiveMessage", function (message) {
+            document.getElementById("receivedMessage").innerText = message;
+        });
+
+        // התחלת החיבור ל-Hub
+        connection.start().catch(function (err) {
+            return console.error(err.toString());
+        });
+
+        // שליחת הודעה ל-Hub כאשר הכפתור נלחץ
+        document.getElementById("sendMessageButton").addEventListener("click", function () {
+            connection.invoke("SendMessageToAll", "זוהי הודעה שנשלחה מהלקוח!").catch(function (err) {
+                return console.error(err.toString());
+            });
+        });
+
+        function populateTable(queue, tableId) {
+            const tableBody = document.querySelector(tableId + " tbody");
+            tableBody.innerHTML = ""; // clear existing rows
+
+            queue.forEach(function (threat) {
+                const row = document.createElement("tr");
+
+                row.innerHTML = `
+                            <td>${threat.threatId}</td>
+                            <td>${threat.origin ? threat.origin.name : ''}</td>
+                            <td>${threat.launchTime ? new Date(threat.launchTime).toLocaleString() : ''}</td>
+                            <td>${threat.weapon ? threat.weapon.name : ''}</td>
+                            <td>${threat.missileQuantity}</td>
+                            <td>${threat.hitted !== null ? threat.hitted : ''}</td>
+                            <td>${threat.status}</td>
+                        `;
+
+                tableBody.appendChild(row);
+            });
+        }
+    </script>
+}
