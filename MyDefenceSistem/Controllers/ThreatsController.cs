@@ -79,10 +79,12 @@ namespace MyDefenceSistem.Controllers
             {
                 return RedirectToAction(nameof(Index), new { Error = "Attack not found" });
             }
+            await _treatService.Launch(threat);
             return RedirectToAction(nameof(Index));
         }
         public IActionResult Defence()
         {
+            Task.Run(async () => {await  _treatService.loadQueue();await Task.Delay(5000); _treatService.loadQueue(); });
             return View();
         }
         private bool ThreatExists(int id)
