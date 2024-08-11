@@ -7,5 +7,6 @@ namespace MyDefenceSistem.Services
     {
         public static ConcurrentDictionary<int, CancellationTokenSource> _attacks = new ConcurrentDictionary<int, CancellationTokenSource>();
         public static ConcurrentQueue<Threat> _threatQueue = new ConcurrentQueue<Threat>();
+        public static ConcurrentQueue<Threat> _threatDoneQueue = new ConcurrentQueue<Threat>();
     }
 }

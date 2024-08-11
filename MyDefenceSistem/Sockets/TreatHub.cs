@@ -18,7 +18,13 @@ namespace MyDefenceSistem.Sockets
         }
         public async Task sendmissle()
         {
-            bool result = await _threatsService.interception();
+            string result = await _threatsService.Interception();
+            await Clients.All.SendAsync("SpecialMessage", $"{result}");
+        }
+        public async Task SendInitialRequest()
+        {
+            await _threatsService.loadQueue();
+            await _threatsService.SendThreats();
         }
     }
 }
