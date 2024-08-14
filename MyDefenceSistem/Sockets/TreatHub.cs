@@ -26,5 +26,10 @@ namespace MyDefenceSistem.Sockets
             await _threatsService.loadQueue();
             await _threatsService.SendThreats();
         }
+
+        public async Task EndThreat(int id)
+        {
+            //await _threatsService.EndThreat(id);
+        }
     }
 }

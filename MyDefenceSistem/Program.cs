@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MyDefenceSistem.Data;
 using MyDefenceSistem.Services;
 using MyDefenceSistem.Sockets;
+using System.Configuration;
 namespace MyDefenceSistem
 {
     public class Program

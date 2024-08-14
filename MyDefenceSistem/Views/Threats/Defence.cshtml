@@ -4,7 +4,6 @@
 
 <h2>חדר מצב</h2>
 
-<!-- אזור הודעות מיוחדות -->
 <div id="specialMessages" class="alert"></div>
 
 <div id="tableContainer">
@@ -17,6 +16,7 @@
                 <th>זמן שיגור</th>
                 <th>סוג נשק</th>
                 <th>כמות טילים</th>
+                <th>זמן לפגיעה</th>
             </tr>
         </thead>
         <tbody>
@@ -73,8 +73,8 @@
         connection.on("ReceiveQueue", function (queue3) {
             populateTable2(queue3, "#queue3Table");
         });
-        connection.on("ReciveUpdate", function (threat) {
-
+        connection.on("ReciveUpdate", function (id, time) {
+            updatetime(id, time)
         })
         
         connection.on("SpecialMessage", function (message) {
@@ -106,6 +106,7 @@
                             <td>${threat.launchTime ? new Date(threat.launchTime).toLocaleString() : ''}</td>
                             <td>${threat.weapon ? threat.weapon.type : ''}</td>
                             <td>${threat.missleQuantity}</td>
+                            <td>לא מוגדר</td>
                         `;
                
                 tableBody.appendChild(row);
@@ -161,6 +162,25 @@
                 specialMessagesDiv.innerHTML = "";
                 specialMessagesDiv.classList.remove("alert-success");
             }, 5000);
+        }
+        function updatetime(id, time) {
+            const tableBody = document.querySelector("#queue1Table tbody");
+
+            // Find the row with the matching threatId
+            const row = Array.from(tableBody.querySelectorAll("tr")).find(tr => {
+                return tr.querySelector("td").innerText === id.toString();
+            });
+
+            if (row) {
+                const timeCell = row.querySelector("td:nth-child(6)"); // The 6th column for "זמן לפגיעה"
+
+                // Update the time cell with the remaining time
+                if (time <= 0) {
+                    timeCell.innerText = "פוגע";
+                } else {
+                    timeCell.innerText = time;
+                }
+            }
         }
     </script>
     <style>
