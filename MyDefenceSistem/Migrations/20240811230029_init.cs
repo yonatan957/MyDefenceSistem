@@ -71,6 +71,7 @@ namespace MyDefenceSistem.Migrations
                     WeaponId = table.Column<int>(type: "int", nullable: false),
                     MissleQuantity = table.Column<int>(type: "int", nullable: false),
                     hitted = table.Column<int>(type: "int", nullable: true),
+                    TimeToHit = table.Column<int>(type: "int", nullable: true),
                     Status = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>

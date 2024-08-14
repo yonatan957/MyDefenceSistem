@@ -12,7 +12,7 @@ using MyDefenceSistem.Data;
 namespace MyDefenceSistem.Migrations
 {
     [DbContext(typeof(MyDefenceSistemContext))]
-    [Migration("20240807145218_init")]
+    [Migration("20240811230029_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -83,6 +83,9 @@ namespace MyDefenceSistem.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TimeToHit")
                         .HasColumnType("int");
 
                     b.Property<int>("WeaponId")

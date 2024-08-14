@@ -59,6 +59,7 @@ namespace MyDefenceSistem.Services
                     await Task.Delay(1000, token);
                     elapsed++;
                     Console.WriteLine($"Threat {id} going to hit in {minutesToHitt - elapsed}");
+
                 }
             }
             catch (Exception ex)
@@ -70,6 +71,41 @@ namespace MyDefenceSistem.Services
                 await EndThreat(id);
             }
         }
+
+        //public async Task RunThreat(int id, int minutesToHit, CancellationToken token)
+        //{
+        //    try
+        //    {
+        //        Console.WriteLine($"Starting RunThreat for id {id}");
+        //        int elapsed = 0;
+        //        Threat? threat = await _dbcontext.Threat.FindAsync(id);
+        //        if (threat == null) return;
+
+        //        threat.TimeToHit = minutesToHit;
+
+        //        while (elapsed < minutesToHit && !token.IsCancellationRequested)
+        //        {
+        //            await Task.Delay(1000, token);
+        //            elapsed++;
+        //            int timeRemaining = minutesToHit - elapsed;
+
+        //            // עדכן את זמן ההגעה לאיום
+        //            threat.TimeToHit = timeRemaining;
+        //            await _dbcontext.SaveChangesAsync();
+
+        //            // שלח עדכון לכל המשתמשים
+        //            await _hubContext.Clients.All.SendAsync("UpdateTimeRemaining", id, timeRemaining);
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"Exception in RunThreat: {ex.Message}");
+        //    }
+        //    finally
+        //    {
+        //        await EndThreat(id);
+        //    }
+        //}
 
         /// <summary>
         /// Ends a threat by marking it as completed and removing it from active threats.
@@ -96,7 +132,7 @@ namespace MyDefenceSistem.Services
                 string validationResult = await ValidateAndPrepareInterception(frontThreat.ThreatId);
                 if (validationResult != "Success") return validationResult;
 
-                if (frontThreat.MissleQuantity <= 0)
+                if (frontThreat.MissleQuantity <= 1)
                 {
                     await EndThreat(frontThreat.ThreatId);
                     Information._threatQueue.TryDequeue(out _);

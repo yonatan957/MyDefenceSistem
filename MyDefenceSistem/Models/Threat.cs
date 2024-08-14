@@ -32,6 +32,7 @@ namespace MyDefenceSistem.Models
         [Display(Name = "כמות טילים שיורטו")]
         public int? hitted { get; set; }
 
+        public int ? TimeToHit { get; set; }
 
         [Display(Name = "מצב האיום")]
         public ThreatStatus Status { get; set; }

@@ -82,6 +82,9 @@ namespace MyDefenceSistem.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.Property<int?>("TimeToHit")
+                        .HasColumnType("int");
+
                     b.Property<int>("WeaponId")
                         .HasColumnType("int");
 
