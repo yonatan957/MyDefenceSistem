@@ -1,18 +1,82 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
+using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.Blazor;
+using MyDefenceSistem.DAL;
 using MyDefenceSistem.Data;
 using MyDefenceSistem.Models;
 using MyDefenceSistem.Sockets;
 using System.Collections.Concurrent;
 using static MyDefenceSistem.Models.Enums;
 
-namespace MyDefenceSistem.Services
+namespace MyDefenceSistem.BL
 {
-    public class ThreatsService(MyDefenceSistemContext dbcontext, IHubContext<TreatHub> hubContext, IServiceProvider serviceProvider)
+    public interface IThreatsService
+    {
+        Task<int> CreateThreat(Threat threat);
+        Task<int> UpdateThreat(Threat threat);
+        Task<int> DeleteThreat(int id);
+        Task<bool> ThreatExist(int id);
+        Task<bool> Launch(int id);
+        Task<List<Threat>> GetNOnActiveThreats();
+
+    }
+    public class ThreatsService(MyDefenceSistemContext dbcontext, IHubContext<TreatHub> hubContext, IServiceProvider serviceProvider, IThreatTable threatTable): IThreatsService 
     {
         private readonly MyDefenceSistemContext _dbcontext = dbcontext;
         private readonly IHubContext<TreatHub> _hubContext = hubContext;
+        private readonly IThreatTable _threatTable = threatTable;
+
+        public async Task<int> CreateThreat(Threat threat)
+        {
+            threat.hitted = 0;
+            return await _threatTable.CreateThreat(threat);
+        }
+
+        public async Task<int> UpdateThreat(Threat threat)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<int> DeleteThreat(int id)
+        {
+            return await _threatTable.DeleteThreat(id);
+        }
+
+        public async Task<bool> ThreatExist(int id)
+        {
+            return await _threatTable.ThreatExist(id);
+        }
+        public async Task<List<Threat>> GetNOnActiveThreats()
+        {
+            return await _threatTable.GetNOnActiveThreats();
+        }
+
+        /// <summary>
+        /// Launches a threat by activating it and starting its countdown.
+        /// </summary>
+        public async Task<bool> Launch(int id)
+        {
+            var threat = await _threatTable.GetThreatById(id);
+            if (threat == null || threat.Status != ThreatStatus.NonActive)
+            {
+                return false;
+            }
+            threat.Status = ThreatStatus.Active;
+            threat.LaunchTime = DateTime.Now;
+            await _threatTable.UpdateThreat(threat);
+            // TO DO !!!!!!!: CHEK IF ITS SUCSSES
+
+            var cts = new CancellationTokenSource();
+            Information._attacks[threat.ThreatId] = cts;
+
+            int minutesToHitt = CalculateMinutesToHit(threat);
+            RunThreatAsync(threat.ThreatId, minutesToHitt, cts.Token);
+            await loadQueue();
+            Task.Run(() => SendThreats());
+
+            return true;
+        }
 
         /// <summary>
         /// Sends the current threats and completed threats to all clients via SignalR.
@@ -23,23 +87,7 @@ namespace MyDefenceSistem.Services
             await _hubContext.Clients.All.SendAsync("ReceiveQueue", Information._threatDoneQueue);
         }
 
-        /// <summary>
-        /// Launches a threat by activating it and starting its countdown.
-        /// </summary>
-        public async Task Launch(Threat threat)
-        {
-            UpdateThreatStatus(threat, ThreatStatus.Active);
-            threat.LaunchTime = DateTime.Now;
-            await SaveChangesAsync();
 
-            var cts = new CancellationTokenSource();
-            Information._attacks[threat.ThreatId] = cts;
-            int minutesToHitt = CalculateMinutesToHit(threat);
-
-            RunThreatAsync(threat.ThreatId, minutesToHitt, cts.Token);
-            await loadQueue();
-            Task.Run(() => SendThreats());
-        }
 
         /// <summary>
         /// Runs the threat countdown and handles its completion or cancellation.
@@ -66,7 +114,6 @@ namespace MyDefenceSistem.Services
                 }
                 finally
                 {
-
                     await EndThreat(id, context);
                     
                 }
@@ -82,8 +129,8 @@ namespace MyDefenceSistem.Services
             if (threat == null || threat.Status != ThreatStatus.Active) { return false; }
 
             CancelThreat(threat.ThreatId);
-            UpdateThreatStatus(threat, ThreatStatus.Done);
-            await context.SaveChangesAsync();
+            threat.Status = ThreatStatus.Done;
+            await _threatTable.UpdateThreat(threat);
             Information._threatQueue = new(Information._threatQueue.Where(t => t.ThreatId != id));
             Information._threatDoneQueue.Enqueue(threat);
             await SendThreats();
@@ -140,11 +187,6 @@ namespace MyDefenceSistem.Services
             return await _dbcontext.Threat.FindAsync(id);
         }
 
-        private void UpdateThreatStatus(Threat threat, ThreatStatus status)
-        {
-            threat.Status = status;
-        }
-
         private void CancelThreat(int threatId)
         {
             if (Information._attacks.TryRemove(threatId, out CancellationTokenSource? cts))
@@ -183,5 +225,7 @@ namespace MyDefenceSistem.Services
         {
             Task.Run(() => RunThreat(threatId, minutesToHitt, token), token);
         }
+
+
     }
 }

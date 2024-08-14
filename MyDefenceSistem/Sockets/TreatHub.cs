@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using MyDefenceSistem.Services;
+using MyDefenceSistem.BL;
 
 namespace MyDefenceSistem.Sockets
 {

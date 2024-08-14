@@ -7,34 +7,36 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using MyDefenceSistem.Data;
 using MyDefenceSistem.Models;
-using MyDefenceSistem.Services;
+using MyDefenceSistem.BL;
 using static MyDefenceSistem.Models.Enums;
 
 namespace MyDefenceSistem.Controllers
 {
     public class ThreatsController : Controller
     {
-        private readonly MyDefenceSistemContext _context;
-        private readonly ThreatsService _treatService;
-
-        public ThreatsController(MyDefenceSistemContext context, ThreatsService threatsService)
-        {
-            _context = context;
+        // TO DO!!!!!!!!: private readonly IThreatsService _treatService;  replace after refactor 
+        private readonly IThreatsService _treatService;
+        private readonly IWeaponsService _weaponsService;
+        private readonly IoriginService _ioriginService;
+        public ThreatsController( IThreatsService threatsService, IoriginService ioriginService, IWeaponsService weaponsService)
+        {         
             _treatService = threatsService;
+            _ioriginService = ioriginService;
+            _weaponsService = weaponsService;
         }
 
         // GET: Threats
         public async Task<IActionResult> Index()
         {
-            var myDefenceSistemContext = _context.Threat.Include(t => t.Origin).Include(t => t.Weapon).Where(t => t.Status == ThreatStatus.NonActive);
-            return View(await myDefenceSistemContext.ToListAsync());
+            var myDefenceSistemContext = await _treatService.GetNOnActiveThreats();
+            return View(myDefenceSistemContext);
         }
 
         // GET: Threats/Create
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
-            ViewData["OriginId"] = new SelectList(_context.Origins, "Id", "Name");
-            ViewData["WeaponId"] = new SelectList(_context.Weapons, "WeaponId", "Type");
+            ViewData["OriginId"] = new SelectList(await _ioriginService.GetOriginListAsync(), "Id", "Name");
+            ViewData["WeaponId"] = new SelectList(await _weaponsService.GetWeaponsListAsync(), "WeaponId", "Type");
             return View();
         }
 
@@ -48,26 +50,16 @@ namespace MyDefenceSistem.Controllers
 
             if (ModelState.IsValid)
             {
-                threat.hitted = 0;
-                _context.Add(threat);
-                await _context.SaveChangesAsync();
+                await _treatService.CreateThreat(threat);
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["OriginId"] = new SelectList(_context.Origins, "Id", "Id", threat.OriginId);
-            ViewData["WeaponId"] = new SelectList(_context.Weapons, "WeaponId", "Type", threat.WeaponId);
             return View(threat);
         }
 
         // GET: Threats/Delete/5
-        public async Task<IActionResult> Delete(int? id)
+        public async Task<IActionResult> Delete(int id)
         {
-            var threat = await _context.Threat.FindAsync(id);
-            if (threat != null)
-            {
-                _context.Threat.Remove(threat);
-            }
-
-            await _context.SaveChangesAsync();
+            await _treatService.DeleteThreat(id);
             return RedirectToAction(nameof(Index));
         }
         [HttpPost]
@@ -75,22 +67,20 @@ namespace MyDefenceSistem.Controllers
         {
             if (id == 0 || id == null) 
                 return NotFound();
-            var threat = _context.Threat.Include(t => t.Weapon).Include(t => t.Origin).FirstOrDefault(t => t.ThreatId == id);
-            if (threat == null || threat.Status == ThreatStatus.Done || threat.Status == ThreatStatus.Active)
+            var Sucsses = await _treatService.Launch(id);
+            if (!Sucsses)
             {
                 return RedirectToAction(nameof(Index), new { Error = "Attack not found" });
             }
-            await _treatService.Launch(threat);
             return RedirectToAction(nameof(Index));
         }
         public IActionResult Defence()
         {
-            Task.Run(async () => {await  _treatService.loadQueue();await Task.Delay(5000); await _treatService.SendThreats(); });
             return View();
         }
-        private bool ThreatExists(int id)
+        private async Task<bool> ThreatExists(int id)
         {
-            return _context.Threat.Any(e => e.ThreatId == id);
+            return await _treatService.ThreatExist(id);
         }
     }
 }

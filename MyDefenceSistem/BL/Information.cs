@@ -1,7 +1,7 @@
 ﻿using MyDefenceSistem.Models;
 using System.Collections.Concurrent;
 
-namespace MyDefenceSistem.Services
+namespace MyDefenceSistem.BL
 {
     public static class Information
     {

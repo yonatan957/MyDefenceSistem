@@ -1,9 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MyDefenceSistem.Data;
-using MyDefenceSistem.Services;
+using MyDefenceSistem.BL;
 using MyDefenceSistem.Sockets;
 using System.Configuration;
+using MyDefenceSistem.DAL;
 namespace MyDefenceSistem
 {
     public class Program
@@ -14,12 +15,15 @@ namespace MyDefenceSistem
             builder.Services.AddDbContext<MyDefenceSistemContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("MyDefenceSistemContext") ?? throw new InvalidOperationException("Connection string 'MyDefenceSistemContext' not found.")));
 
-            builder.Services.AddScoped<ThreatsService>();
             // Add services to the container.
             builder.Services.AddControllersWithViews();
             builder.Services.AddSignalR();
-            builder.Services.AddScoped(typeof(ThreatsService));
-
+            builder.Services.AddScoped<IThreatsService, ThreatsService>();
+            builder.Services.AddScoped<IWeaponsService, WeaponsService>();
+            builder.Services.AddScoped<IoriginService, OriginService>();
+            builder.Services.AddScoped<IoriginTable, OriginTable>();
+            builder.Services.AddScoped<IWeaponsTable, WeaponsTable>();
+            builder.Services.AddScoped<IThreatTable, ThreatTable>();
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
