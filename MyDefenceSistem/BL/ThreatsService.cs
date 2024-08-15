@@ -195,14 +195,9 @@ namespace MyDefenceSistem.BL
             }
         }
 
-        private async Task SaveChangesAsync()
-        {
-            await _dbcontext.SaveChangesAsync();
-        }
-
         private async Task<string> ValidateAndPrepareInterception(int id)
         {
-            Threat threat = await _dbcontext.Threat.FindAsync(id);
+            Threat threat = await _threatTable.GetThreatById(id);
             DefinceWeapon definceWeapon = await _dbcontext.DefinceWeapon.FirstOrDefaultAsync();
             if (definceWeapon.quantity <= 0)
                 return "לא מספיק תחמושת";
@@ -217,7 +212,7 @@ namespace MyDefenceSistem.BL
             threat.MissleQuantity -= 1;
             threat.hitted += 1;
 
-            await SaveChangesAsync();
+            await _threatTable.UpdateThreat(threat);
             return "Success";
         }
 
@@ -225,7 +220,5 @@ namespace MyDefenceSistem.BL
         {
             Task.Run(() => RunThreat(threatId, minutesToHitt, token), token);
         }
-
-
     }
 }
