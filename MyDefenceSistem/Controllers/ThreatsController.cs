@@ -85,7 +85,6 @@ namespace MyDefenceSistem.Controllers
         }
         public IActionResult Defence()
         {
-            Task.Run(async () => {await  _treatService.loadQueue();await Task.Delay(5000); await _treatService.SendThreats(); });
             return View();
         }
         private bool ThreatExists(int id)
