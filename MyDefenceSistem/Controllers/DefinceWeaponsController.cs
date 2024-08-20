@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using MyDefenceSistem.BL;
 using MyDefenceSistem.Data;
 using MyDefenceSistem.Models;
 
@@ -12,38 +13,27 @@ namespace MyDefenceSistem.Controllers
 {
     public class DefinceWeaponsController : Controller
     {
-        private readonly MyDefenceSistemContext _context;
+        private readonly IDefenceWeaponService _defenceWeaponService;
 
-        public DefinceWeaponsController(MyDefenceSistemContext context)
+        public DefinceWeaponsController(IDefenceWeaponService defenceWeaponService)
         {
-            _context = context;
+            _defenceWeaponService = defenceWeaponService;
         }
 
         // GET: DefinceWeapons
         public async Task<IActionResult> Index()
         {
-            return View(await _context.DefinceWeapon.ToListAsync());
+            return View(await _defenceWeaponService.GetTable());
         }
 
         [HttpPost]
-        public IActionResult UpdateQuantity(int id, int quantity)
+        public async Task<IActionResult> UpdateQuantity(int id, int quantity)
         {
-            var item = _context.DefinceWeapons.Find(id);
-            if (item == null)
-            {
-                return NotFound();
-            }
-
-            item.quantity = quantity;
-            _context.Update(item);
-            _context.SaveChanges();
-
+            var sucsses = await _defenceWeaponService.UpdateQuantity(id, quantity);
+            if (!sucsses) return BadRequest();
             return RedirectToAction(nameof(Index));
         }
         
-        private bool DefinceWeaponExists(int id)
-        {
-            return _context.DefinceWeapon.Any(e => e.Id == id);
-        }
+
     }
 }

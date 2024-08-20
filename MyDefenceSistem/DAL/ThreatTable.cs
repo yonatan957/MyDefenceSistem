@@ -13,7 +13,7 @@ namespace MyDefenceSistem.DAL
         public Task<int> DeleteThreat(int id);
         public Task<bool> ThreatExist(int id);
         public Task<Threat> GetThreatById(int id);
-        public Task<List<Threat>> GetNOnActiveThreats();
+        public Task<List<Threat>> GetThreatsByStatus(ThreatStatus threatStatus);
     }
     public class ThreatTable : IThreatTable
     {
@@ -56,13 +56,14 @@ namespace MyDefenceSistem.DAL
         {
             return await _context.Threat.Include(t => t.Weapon).Include(t => t.Origin).FirstOrDefaultAsync(t => t.ThreatId == id);
         }
-        public async Task<List<Threat>> GetNOnActiveThreats()
+        public async Task<List<Threat>> GetThreatsByStatus(ThreatStatus threatStatus)
         {
-            return await _context.Threat
-                    .Include(t => t.Origin)
-                    .Include(t => t.Weapon)
-                    .Where(t => t.Status == ThreatStatus.NonActive)
-                    .ToListAsync();
+            List<Threat> threatsFromDb = await _context.Threat
+                .Where(t => t.Status == threatStatus).
+                Include(t => t.Weapon).
+                Include(t => t.Origin).
+                ToListAsync();
+            return threatsFromDb;
         }
     }
 }

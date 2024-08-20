@@ -18,19 +18,22 @@ namespace MyDefenceSistem.BL
         Task<int> DeleteThreat(int id);
         Task<bool> ThreatExist(int id);
         Task<bool> Launch(int id);
-        Task<List<Threat>> GetNOnActiveThreats();
+        Task<List<Threat>> GetThreatsByStatus(ThreatStatus threatStatus);
 
     }
-    public class ThreatsService(MyDefenceSistemContext dbcontext, IHubContext<TreatHub> hubContext, IServiceProvider serviceProvider, IThreatTable threatTable): IThreatsService 
+    public class ThreatsService(IHubContext<TreatHub> hubContext, IThreatTable threatTable, IDefenceWeaponTable defenceWeaponTable): IThreatsService 
     {
-        private readonly MyDefenceSistemContext _dbcontext = dbcontext;
         private readonly IHubContext<TreatHub> _hubContext = hubContext;
         private readonly IThreatTable _threatTable = threatTable;
-
+        private readonly IDefenceWeaponTable _defenceWeaponTable = defenceWeaponTable;
         public async Task<int> CreateThreat(Threat threat)
         {
             threat.hitted = 0;
             return await _threatTable.CreateThreat(threat);
+        }
+        public async Task<List<Threat>> GetThreatsByStatus(ThreatStatus threatStatus)
+        {
+            return await _threatTable.GetThreatsByStatus(threatStatus);
         }
 
         public async Task<int> UpdateThreat(Threat threat)
@@ -47,10 +50,7 @@ namespace MyDefenceSistem.BL
         {
             return await _threatTable.ThreatExist(id);
         }
-        public async Task<List<Threat>> GetNOnActiveThreats()
-        {
-            return await _threatTable.GetNOnActiveThreats();
-        }
+
 
         /// <summary>
         /// Launches a threat by activating it and starting its countdown.
@@ -94,38 +94,33 @@ namespace MyDefenceSistem.BL
         /// </summary>
         public async Task RunThreat(int id, int minutesToHitt, CancellationToken token)
         {
-            using (var scope = serviceProvider.CreateScope())
+            try
             {
-                var context = scope.ServiceProvider.GetRequiredService<MyDefenceSistemContext>();
-                try
+                int elapsed = 0;
+                while (elapsed < minutesToHitt && !token.IsCancellationRequested)
                 {
-                    int elapsed = 0;
-                    while (elapsed < minutesToHitt && !token.IsCancellationRequested)
-                    {
-                        await Task.Delay(1000, token);
-                        elapsed++;
-                        Console.WriteLine($"Threat {id} going to hit in {minutesToHitt - elapsed}");
-                        await _hubContext.Clients.All.SendAsync("ReciveUpdate", id, (minutesToHitt - elapsed));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Exception in RunThreat: {ex.Message}");
-                }
-                finally
-                {
-                    await EndThreat(id, context);
-                    
+                    await Task.Delay(1000, token);
+                    elapsed++;
+                    Console.WriteLine($"Threat {id} going to hit in {minutesToHitt - elapsed}");
+                    await _hubContext.Clients.All.SendAsync("ReciveUpdate", id, (minutesToHitt - elapsed));
                 }
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Exception in RunThreat: {ex.Message}");
+            }
+            finally
+            {
+                await EndThreat(id);               
+            }        
         }
 
         /// <summary>
         /// Ends a threat by marking it as completed and removing it from active threats.
         /// </summary>
-        public async Task<bool> EndThreat(int id, MyDefenceSistemContext context )
+        public async Task<bool> EndThreat(int id)
         {
-            Threat? threat = await context.Threat.Where(t => t.ThreatId == id).Include(t => t.Weapon).Include(t => t.Origin).FirstAsync();
+            Threat? threat = await _threatTable.GetThreatById(id);
             if (threat == null || threat.Status != ThreatStatus.Active) { return false; }
 
             CancelThreat(threat.ThreatId);
@@ -145,12 +140,14 @@ namespace MyDefenceSistem.BL
         {
             if (Information._threatQueue.TryPeek(out Threat frontThreat))
             {
-                string validationResult = await ValidateAndPrepareInterception(frontThreat.ThreatId);
+                string validationResult = await ValidateInterception(frontThreat.ThreatId);
                 if (validationResult != "Success") return validationResult;
+
+                await PrepareInterception(frontThreat.ThreatId);
                 frontThreat.MissleQuantity--;
                 if (frontThreat.MissleQuantity <= 0)
                 {
-                    await EndThreat(frontThreat.ThreatId, _dbcontext);
+                    await EndThreat(frontThreat.ThreatId);
                     Information._threatQueue.TryDequeue(out _);
                 }
 
@@ -165,10 +162,11 @@ namespace MyDefenceSistem.BL
         /// </summary>
         public async Task loadQueue()
         {
-            Information._threatQueue = await LoadThreatsByStatus(ThreatStatus.Active);
-            Information._threatDoneQueue = await LoadThreatsByStatus(ThreatStatus.Done);
+            List<Threat> threatsActive = await _threatTable.GetThreatsByStatus(ThreatStatus.Active);
+            List<Threat> threatsDone = await _threatTable.GetThreatsByStatus(ThreatStatus.Done);
+            Information._threatQueue = new ConcurrentQueue<Threat>(threatsActive);
+            Information._threatDoneQueue = new ConcurrentQueue<Threat>(threatsDone); 
         }
-
         // פונקציות עזר
 
         private int CalculateMinutesToHit(Threat threat)
@@ -176,16 +174,6 @@ namespace MyDefenceSistem.BL
             return (int)((double)threat.Origin.Distance / threat.Weapon.Speed * 60);
         }
 
-        private async Task<ConcurrentQueue<Threat>> LoadThreatsByStatus(ThreatStatus status)
-        {
-            List<Threat> threatsFromDb = await _dbcontext.Threat.Where(t => t.Status == status).Include(t => t.Weapon).Include(t => t.Origin).ToListAsync();
-            return new ConcurrentQueue<Threat>(threatsFromDb);
-        }
-
-        private async Task<Threat?> FindThreatAsync(int id)
-        {
-            return await _dbcontext.Threat.FindAsync(id);
-        }
 
         private void CancelThreat(int threatId)
         {
@@ -195,10 +183,10 @@ namespace MyDefenceSistem.BL
             }
         }
 
-        private async Task<string> ValidateAndPrepareInterception(int id)
+        private async Task<string> ValidateInterception(int id)
         {
             Threat threat = await _threatTable.GetThreatById(id);
-            DefinceWeapon definceWeapon = await _dbcontext.DefinceWeapon.FirstOrDefaultAsync();
+            DefinceWeapon definceWeapon = await _defenceWeaponTable.GetWeapon(1);
             if (definceWeapon.quantity <= 0)
                 return "לא מספיק תחמושת";
 
@@ -208,17 +196,26 @@ namespace MyDefenceSistem.BL
             if (threat.MissleQuantity <= 0)
                 return "שגיאה";
 
+            
+            return "Success";
+        }
+        private async Task<bool> PrepareInterception(int id)
+        {
+            Threat threat = await _threatTable.GetThreatById(id);
+            DefinceWeapon definceWeapon = await _defenceWeaponTable.GetWeapon(1);
             definceWeapon.quantity -= 1;
             threat.MissleQuantity -= 1;
             threat.hitted += 1;
-
+            await _defenceWeaponTable.UpdateQuantity(1, definceWeapon.quantity);
             await _threatTable.UpdateThreat(threat);
-            return "Success";
+            return true;
         }
 
         private void RunThreatAsync(int threatId, int minutesToHitt, CancellationToken token)
         {
             Task.Run(() => RunThreat(threatId, minutesToHitt, token), token);
         }
+
+
     }
 }

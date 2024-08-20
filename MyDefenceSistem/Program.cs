@@ -18,12 +18,14 @@ namespace MyDefenceSistem
             // Add services to the container.
             builder.Services.AddControllersWithViews();
             builder.Services.AddSignalR();
+            builder.Services.AddScoped<IDefenceWeaponService, DefenceWeaponService>();
             builder.Services.AddScoped<IThreatsService, ThreatsService>();
             builder.Services.AddScoped<IWeaponsService, WeaponsService>();
             builder.Services.AddScoped<IoriginService, OriginService>();
             builder.Services.AddScoped<IoriginTable, OriginTable>();
             builder.Services.AddScoped<IWeaponsTable, WeaponsTable>();
             builder.Services.AddScoped<IThreatTable, ThreatTable>();
+            builder.Services.AddScoped<IDefenceWeaponTable, DefenceWeaponTable>();
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
